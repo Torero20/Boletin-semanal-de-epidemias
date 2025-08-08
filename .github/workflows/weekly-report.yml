@@ -1,0 +1,26 @@
+name: Enviar resumen semanal del ECDC
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'     # Lunes a las 08:00 UTC (10:00 en España durante el verano)
+  workflow_dispatch:         # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          pip install requests beautifulsoup4 pdfplumber sumy googletrans==4.0.0-rc1
+
+      - name: Ejecutar el agente
+        env:
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: |
+          python summarization_agent.py
