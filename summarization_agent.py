@@ -315,7 +315,7 @@ def main() -> None:
         # URL of the weekly threats report page.  Replace it with the page
         # corresponding to the current week; for automatic updates use the
         # general listing page of the CDTR series.
-        base_url="base_url="base_url = "https://www.ecdc.europa.eu/en/publications-and-data/monitoring/weekly-threats-reports",
+        base_url="https://www.ecdc.europa.eu/en/publications-and-data/monitoring/weekly-threats-reports",
         # This setting is also configurable via Config.summary_sentences but
         # defaults to a longer summary in the dataclass.
         summary_sentences=10,
