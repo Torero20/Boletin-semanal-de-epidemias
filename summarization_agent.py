@@ -83,67 +83,33 @@ class WeeklyReportAgent:
 
     def fetch_latest_pdf_url(self) -> Optional[str]:
         """
-        Fetch the latest PDF link from the configured base URL.
+        Fetch the latest PDF link from the base URL by parsing the HTML.
 
-        This method is flexible enough to handle two scenarios:
+        Returns the full URL of the most recent PDF matching the pattern, or
+        None if no PDF link is found.
 
-        1. **Listing pages**: If the base URL points to a page that lists
-           multiple reports (such as the general CDTR listing), the method
-           looks for links that appear to be CDTR report pages and follows
-           the first one (assumed to be the most recent).  It then parses
-           that subpage to find a PDF link.
-        2. **Direct report pages**: If the base URL already points to a
-           specific report page, the method searches for links ending in
-           ".pdf" on that page and returns the first match.
-
-        Returns the URL of the PDF if found, otherwise ``None``.
+        The method uses BeautifulSoup to parse the HTML page.  It searches for
+        all anchor tags whose `href` attribute matches the configured
+        `pdf_pattern` and returns the last occurrence, assuming the page lists
+        reports chronologically.  You may need to adjust the sorting logic
+        depending on the website’s structure.
         """
-        try:
-            response = requests.get(self.config.base_url, timeout=30)
-            response.raise_for_status()
-        except Exception:
-            return None
+        response = requests.get(self.config.base_url, timeout=30)
+        response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
-        # First attempt: look for direct PDF links on the page
         pdf_links: List[str] = []
         for a in soup.find_all("a", href=True):
             href = a["href"]
             if re.search(self.config.pdf_pattern, href, re.IGNORECASE):
+                # Resolve relative URLs
                 pdf_url = href
                 if not href.startswith("http"):
                     pdf_url = requests.compat.urljoin(self.config.base_url, href)
                 pdf_links.append(pdf_url)
-        if pdf_links:
-            # Return the first PDF link found
-            return pdf_links[0]
-        # If no direct PDF links were found, attempt to find the latest report page
-        report_links: List[str] = []
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            # Identify subpage links for weekly CDTR reports by keyword
-            if re.search(r"communicable-disease-threats-report", href, re.IGNORECASE):
-                report_url = href
-                if not href.startswith("http"):
-                    report_url = requests.compat.urljoin(self.config.base_url, href)
-                report_links.append(report_url)
-        if not report_links:
+        if not pdf_links:
             return None
-        # Assume the list is ordered newest-first and follow the first link
-        latest_report_url = report_links[0]
-        try:
-            sub_resp = requests.get(latest_report_url, timeout=30)
-            sub_resp.raise_for_status()
-        except Exception:
-            return None
-        sub_soup = BeautifulSoup(sub_resp.text, "html.parser")
-        for a in sub_soup.find_all("a", href=True):
-            href = a["href"]
-            if re.search(self.config.pdf_pattern, href, re.IGNORECASE):
-                pdf_url = href
-                if not href.startswith("http"):
-                    pdf_url = requests.compat.urljoin(latest_report_url, href)
-                return pdf_url
-        return None
+        # Return the last link assuming newest last
+        return pdf_links[-1]
 
     def download_pdf(self, pdf_url: str, dest_path: str) -> None:
         """Download a PDF from the given URL to the specified destination path."""
@@ -349,7 +315,7 @@ def main() -> None:
         # URL of the weekly threats report page.  Replace it with the page
         # corresponding to the current week; for automatic updates use the
         # general listing page of the CDTR series.
-        base_url="https://www.ecdc.europa.eu/en/publications-and-data/monitoring/weekly-threats-reports",
+        base_url="base_url="https://www.ecdc.europa.eu/en/publications-and-data/monitoring/weekly-threats-reports",
         # This setting is also configurable via Config.summary_sentences but
         # defaults to a longer summary in the dataclass.
         summary_sentences=10,
