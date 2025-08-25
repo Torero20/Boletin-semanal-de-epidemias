@@ -110,8 +110,8 @@ class Config:
     summary_sentences: int = 8
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 465
-    sender_email: str = ""
-    receiver_email: str = ""
+    sender_email: str = "agentia70@gmail.com"
+    receiver_email: str = "contra1270@gmail.com"
     ca_file: Optional[str] = None
     state_path: str = os.getenv("AGENT_STATE_PATH", ".agent_state.json")
 
