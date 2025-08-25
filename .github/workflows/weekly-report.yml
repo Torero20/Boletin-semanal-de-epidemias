@@ -1,0 +1,50 @@
+name: Enviar resumen semanal del ECDC
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Lunes 08:00 UTC (10:00 en España en verano)
+  workflow_dispatch:      # Permite lanzar el flujo manualmente
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Restaurar caché de estado del agente
+        uses: actions/cache@v4
+        with:
+          path: .agent_state.json
+          key: ${{ runner.os }}-weekly-ecdc-agent-v1-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-weekly-ecdc-agent-v1-
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar agente (modo prueba)
+        env:
+          # Variables no sensibles (puedes definirlas también como Actions Variables)
+          BASE_URL: ${{ vars.BASE_URL }}
+          PDF_PATTERN: ${{ vars.PDF_PATTERN }}
+          SUMMARY_SENTENCES: ${{ vars.SUMMARY_SENTENCES }}
+          CA_FILE: ${{ vars.CA_FILE }}
+          LOG_LEVEL: INFO
+          MAIL_BACKEND: gmail_api
+          # Secrets para Gmail API (sin app password)
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+        run: |
+          # PRIMERA EJECUCIÓN EN MODO PRUEBA (no envía correo). Cambia a `python weekly_agent.py` cuando verifiques los logs
+          python weekly_agent.py --dry-run
